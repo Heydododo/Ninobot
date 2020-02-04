@@ -1,5 +1,5 @@
 discord.py==0.16.8 
-datetime = 2.8.0
-pytz = 2019.3
+datetime 
+pytz 
 discord.ext
 asyncio
