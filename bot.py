@@ -77,6 +77,6 @@ async def on_message(message):
         await message.channel.send("做好覺悟吧!")
         time.sleep(2)
         await message.channel.send("主人<3")
-        await message.channel.send(file=discord.File('nino.jpg'))
+        await message.channel.send("https://imgur.com/EOPfIbh")
 '''client.loop.create_task(update_stats())'''
 client.run(token)
