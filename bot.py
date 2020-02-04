@@ -58,8 +58,16 @@ async def on_message(message):
     messages += 1
     id = client.get_guild(569414055438319637)
     if message.content.find("!hello") != -1:
-        await message.channel.send("Hi")
+        await message.channel.send("怎麼啦~主人?")
     elif message.content == "!users":
         await message.channel.send(f"""# of Members: {id.member_count} """)
+    elif message.content == "!confess":
+        await message.channel.send("我的心意還沒有傳達給你")
+        time.sleep(2)
+        await message.channel.send("所以，我希望你能多了解我一些")
+        time.sleep(2)
+        await message.channel.send("我想要讓你知道，我是有多麼喜歡你")
+        time.sleep(2)
+        await message.channel.send("做好覺悟吧主人<3")
 '''client.loop.create_task(update_stats())'''
 client.run(token)
