@@ -1,5 +1,4 @@
 discord.py==0.16.8 
 datetime 
 pytz 
-discord.ext
 asyncio
