@@ -3,3 +3,4 @@ datetime
 pytz 
 asyncio
 youtube_dl
+pynacl
