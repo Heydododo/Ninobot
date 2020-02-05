@@ -2,3 +2,4 @@ discord.py
 datetime 
 pytz 
 asyncio
+youtube_dl
