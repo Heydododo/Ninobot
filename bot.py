@@ -78,6 +78,7 @@ async def leave(ctx):
 
 @client.command(pass_context=True, aliases=['p', 'pla'])
 async def play(ctx, url: str):
+    discord.opus.load_opus('libopus.so')
     channel = ctx.message.author.voice.channel
     voice = get(client.voice_clients, guild=ctx.guild)
 
@@ -99,7 +100,7 @@ async def play(ctx, url: str):
         await ctx.send("ERROR: Music playing")
         return
 
-    await ctx.send("Getting everything ready now")
+    await ctx.send("正在準備音樂!")
 
     voice = get(client.voice_clients, guild=ctx.guild)
 
