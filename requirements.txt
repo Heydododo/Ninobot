@@ -4,3 +4,6 @@ pytz
 asyncio
 youtube_dl
 pynacl
+functools
+itertools
+math
