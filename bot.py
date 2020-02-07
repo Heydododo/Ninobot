@@ -149,7 +149,8 @@ class Song:
     def create_embed(self):
         embed = (discord.Embed(title='Now playing',
                                description='```css\n{0.source.title}\n```'.format(self),
-                               color=discord.Color.blurple())
+                               color=discord.Color.blurple(),
+                               )
                  .add_field(name='長度', value=self.source.duration)
                  .add_field(name='點歌者', value=self.requester.mention)
                  .add_field(name='上傳者', value='[{0.source.uploader}]({0.source.uploader_url})'.format(self)))
@@ -232,7 +233,7 @@ class VoiceState:
                     async with timeout(180):  # 3 minutes
                         self.current = await self.songs.get()
                 except asyncio.TimeoutError:
-                    self.bot.loop.create_task(self.stop())
+
                     return
 
             self.current.source.volume = self._volume
@@ -445,7 +446,7 @@ class Music(commands.Cog):
         else:
             await ctx.send("循環播放關閉")
 
-    @commands.command(name='p')
+    @commands.command(name='p',aliases=['play'])
     async def _play(self, ctx: commands.Context, *, search: str):
         """Plays a song.
         If there are songs in the queue, this will be queued until the
