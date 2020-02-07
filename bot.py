@@ -542,9 +542,13 @@ async def ping(ctx):
     await ctx.send(f"我回應主人的時間是{round(bot.latency*1000)} ms呦！")
 status = cycle(['Do^3!','小提琴!','鋼琴!','書法!','長笛!','唱歌!','打扮!','綁蝴蝶結!','看著主人發呆!'])
 @bot.command()
-async def say(ctx,msg):
+async def say(ctx,*,msg):
     await ctx.message.delete()
     await ctx.send(msg)
+@bot.command()
+async def clean(ctx,num:int):
+    await ctx.channel.purge(limit=num+1)
+
 @tasks.loop(seconds = 5)
 async def change_status():
     await bot.change_presence(status=discord.Status.idle, activity=discord.Game(next(status)))
