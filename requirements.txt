@@ -5,3 +5,4 @@ asyncio
 youtube_dl
 pynacl
 beautifulsoup4
+requests
