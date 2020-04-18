@@ -498,21 +498,31 @@ class Commands(commands.Cog):
 
     @bot.command()
     async def dict(ctx, msg):
+        """翻譯蒟蒻"""
         url = f"https://tw.voicetube.com/definition/{msg}"
         res = requests.get(url)
         soup = BeautifulSoup(res.text,"html.parser")
         print(soup)
-        a = []
-        new_a=[]
-        for li in soup.select('.definition'):
-            a.append(li.text)
-        for t in a:
-            print(t.replace(';','\t'))
-            new_a.append(t.replace(';','\t'))
-        print(new_a)
-        embed = discord.Embed(title=f"""{msg}中文解釋""", description="From Voicetube", color=0xFDA8FD)
+        message = ""
+        pronounce = ""
+        for li in soup.select('.word-def-list'):
+            message += (li.text)
+        if(len(message) == 0):
+            await ctx.send("查無此單字喲!")
+            return 0
 
-        embed.add_field(name="解釋", value= new_a)
+        for li in soup.select('.ps-block'):
+            pronounce += li.text
+        #embed
+        embed = discord.Embed(title=f"""{msg} 中文解釋""", color=0xFDA8FD)
+
+        embed.add_field(name="Pronounce", value=pronounce)
+
+        embed.add_field(name="-", value="-")
+
+        embed.add_field(name="-", value="-")
+
+        embed.add_field(name="Definition", value=message)
 
         await ctx.send(embed=embed)
 
