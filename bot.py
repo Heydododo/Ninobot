@@ -7,13 +7,16 @@ import pytz
 import discord
 import youtube_dl
 from async_timeout import timeout
-from discord.ext import commands,tasks
+from discord.ext import commands, tasks
 import time
 import datetime
 from itertools import cycle
 from random import randint
+from bs4 import BeautifulSoup
+import requests
 
-#Declare
+
+# Declare
 token = 'Njc0MjgwNDk2MTQ2MTUzNTEy.XpFusg.JFL8OAtbWYJkDOEvUGguyFl854M'
 timechannel = 674348205948796958
 memberchannel = 674348439856742430
@@ -298,7 +301,7 @@ class Music(commands.Cog):
 
     @commands.command(name='join', invoke_without_subcommand=True)
     async def _join(self, ctx: commands.Context):
-        """Joins a voice channel."""
+        """加入語音頻道"""
 
         destination = ctx.author.voice.channel
         if ctx.voice_state.voice:
@@ -307,26 +310,9 @@ class Music(commands.Cog):
 
         ctx.voice_state.voice = await destination.connect()
 
-    @commands.command(name='summon')
-    async def _summon(self, ctx: commands.Context, *, channel: discord.VoiceChannel = None):
-        """Summons the bot to a voice channel.
-
-        If no channel was specified, it joins your channel.
-        """
-
-        if not channel and not ctx.author.voice:
-            raise VoiceError('You are neither connected to a voice channel nor specified a channel to join.')
-
-        destination = channel or ctx.author.voice.channel
-        if ctx.voice_state.voice:
-            await ctx.voice_state.voice.move_to(destination)
-            return
-
-        ctx.voice_state.voice = await destination.connect()
-
     @commands.command(name='leave', aliases=['disconnect'])
     async def _leave(self, ctx: commands.Context):
-        """Clears the queue and leaves the voice channel."""
+        """離開語音頻道"""
 
         if not ctx.voice_state.voice:
             return await ctx.send('Not connected to any voice channel.')
@@ -334,49 +320,32 @@ class Music(commands.Cog):
         await ctx.voice_state.stop()
         del self.voice_states[ctx.guild.id]
 
-    @commands.command(name='volume')
-    async def _volume(self, ctx: commands.Context, *, volume: int):
-        """Sets the volume of the player."""
-
-        if not ctx.voice_state.is_playing:
-            return await ctx.send('Nothing being played at the moment.')
-
-        if 0 > volume > 100:
-            return await ctx.send('Volume must be between 0 and 100')
-
-        ctx.voice_state.volume = volume / 100
-        await ctx.send('Volume of the player set to {}%'.format(volume))
-
     @commands.command(name='now', aliases=['current', 'playing'])
     async def _now(self, ctx: commands.Context):
-        """Displays the currently playing song."""
+        """目前撥放歌曲"""
 
         await ctx.send(embed=ctx.voice_state.current.create_embed())
 
-
     @commands.command(name='resume')
     async def _resume(self, ctx: commands.Context):
-        """Resumes a currently paused song."""
+        """繼續"""
 
-        if  ctx.voice_state.is_playing and ctx.voice_state.voice.is_paused():
+        if ctx.voice_state.is_playing and ctx.voice_state.voice.is_paused():
             ctx.voice_state.voice.resume()
             await ctx.message.add_reaction('⏯')
 
     @commands.command(name='stop')
     async def _stop(self, ctx: commands.Context):
 
+        """暫停"""
 
-        """Pauses the currently playing song."""
-
-        if  ctx.voice_state.is_playing and ctx.voice_state.voice.is_playing():
+        if ctx.voice_state.is_playing and ctx.voice_state.voice.is_playing():
             ctx.voice_state.voice.pause()
             await ctx.message.add_reaction('⏯')
 
     @commands.command(name='skip')
     async def _skip(self, ctx: commands.Context):
-        """Vote to skip a song. The requester can automatically skip.
-        3 skip votes are needed for the song to be skipped.
-        """
+        """跳過目前歌曲 """
 
         if not ctx.voice_state.is_playing:
             return await ctx.send('並沒有再撥放歌曲喔！')
@@ -387,12 +356,11 @@ class Music(commands.Cog):
                 await ctx.message.add_reaction('⏭')
                 ctx.voice_state.skip()
 
-
     @commands.command(name='queue')
     async def _queue(self, ctx: commands.Context, *, page: int = 1):
-        """Shows the player's queue.
+        """顯示佇列 至多10個
 
-        You can optionally specify the page to show. Each page contains 10 elements.
+
         """
 
         if len(ctx.voice_state.songs) == 0:
@@ -412,19 +380,9 @@ class Music(commands.Cog):
                  .set_footer(text='Viewing page {}/{}'.format(page, pages)))
         await ctx.send(embed=embed)
 
-    @commands.command(name='shuffle')
-    async def _shuffle(self, ctx: commands.Context):
-        """Shuffles the queue."""
-
-        if len(ctx.voice_state.songs) == 0:
-            return await ctx.send('Empty queue.')
-
-        ctx.voice_state.songs.shuffle()
-        await ctx.message.add_reaction('✅')
-
     @commands.command(name='remove')
     async def _remove(self, ctx: commands.Context, index: int):
-        """Removes a song from the queue at a given index."""
+        """移除指定位置歌曲."""
 
         if len(ctx.voice_state.songs) == 0:
             return await ctx.send('佇列是空的呦！')
@@ -432,30 +390,9 @@ class Music(commands.Cog):
         ctx.voice_state.songs.remove(index - 1)
         await ctx.message.add_reaction('✅')
 
-    @commands.command(name='loop')
-    async def _loop(self, ctx: commands.Context):
-        """Loops the currently playing song.
-
-        Invoke this command again to unloop the song.
-        """
-
-        if not ctx.voice_state.is_playing:
-            return await ctx.send('Nothing being played at the moment.')
-
-        # Inverse boolean value to loop and unloop.
-        ctx.voice_state.loop = not ctx.voice_state.loop
-        await ctx.message.add_reaction('✅')
-
-    @commands.command(name='p',aliases=['play'])
+    @commands.command(name='play', aliases=['p'])
     async def _play(self, ctx: commands.Context, *, search: str):
-        """Plays a song.
-
-        If there are songs in the queue, this will be queued until the
-        other songs finished playing.
-
-        This command automatically searches from various sites if no URL is provided.
-        A list of these sites can be found here: https://rg3.github.io/youtube-dl/supportedsites.html
-        """
+        """撥放歌曲 """
         retStr = str("""```css\n二乃正在努力學習中......```""")
         await ctx.send(retStr)
         if not ctx.voice_state.voice:
@@ -483,8 +420,9 @@ class Music(commands.Cog):
                 raise commands.CommandError('Bot is already in a voice channel.')
 
 
-bot = commands.Bot('!', description='Yet another music bot.')
+bot = commands.Bot('~', description='Do^3 的 所有物')
 bot.add_cog(Music(bot))
+
 
 @bot.event
 async def on_ready():
@@ -507,6 +445,24 @@ async def on_ready():
         await asyncio.sleep(10)
 
 
+@bot.command()
+async def info(ctx):
+    '''機器人資訊'''
+    embed = discord.Embed(title="中野 二乃", description="Do^3 的所有物", color=0xFDA8FD)
+
+    # 在这里提供关于您的信息
+    embed.add_field(name="Author", value="<@432417960993488896>")
+
+    # 显示机器人所服务的数量。
+    embed.add_field(name="所在server數量", value=f"{len(bot.guilds)}")
+    # 给用户提供一个链接来请求机器人接入他们的服务器
+    embed.set_thumbnail(url="https://i.imgur.com/7vDk9As.jpg")
+
+    embed.add_field(name='Invite Link', value="[Click!~](https://discordapp.com/oauth2/authorize?client_id=674280496146153512&scope=bot&permissions=0)")
+
+
+    await ctx.send(embed=embed)
+
 @bot.event
 async def on_member_join(member):
     id = bot.get_guild(guild)
@@ -516,63 +472,72 @@ async def on_member_join(member):
     await bot.get_channel(memberchannel).edit(name=f"伺服器人數\t {id.member_count} ")
 
 
-@bot.command()
-async def hello(ctx):
-    await ctx.send("怎麼啦～主人？")
+class Commands(commands.Cog):
+    @bot.command()
+    async def hello(ctx):
+        '''Hello'''
+        await ctx.send("怎麼啦～主人？")
+
+    @bot.command()
+    async def users(ctx):
+        '''顯示server人數'''
+        id = bot.get_guild(ctx.guild.id)
+        await ctx.send(f"""伺服器人數為 ： {id.member_count} 呦 """)
 
 
-@bot.command()
-async def users(ctx):
-    id = bot.get_guild(guild)
-    await ctx.send(f"""伺服器人數為 ： {id.member_count} 呦 """)
+    @bot.command()
+    async def calcdate(ctx, day: int):
+        """計算天數 例如calcdate 5 則回傳5天後日期"""
+        td = datetime.datetime.now()
+        today = datetime.date.today()
+        tdelta = datetime.timedelta(days=day)
+        result = today + tdelta
+        dt = datetime.datetime.combine(result, td.time())
+        embed = discord.Embed(timestamp=dt)
+        await ctx.channel.send(embed=embed)
+
+    @bot.command()
+    async def dict(ctx, msg):
+        url = f"https://tw.voicetube.com/definition/{msg}"
+        res = requests.get(url)
+        soup = BeautifulSoup(res.text,"html.parser")
+        print(soup)
+        a = []
+        new_a=[]
+        for li in soup.select('.definition'):
+            a.append(li.text)
+        for t in a:
+            print(t.replace(';','\t'))
+            new_a.append(t.replace(';','\t'))
+        print(new_a)
+        embed = discord.Embed(title=f"""{msg}中文解釋""", description="From Voicetube", color=0xFDA8FD)
+
+        embed.add_field(name="解釋", value= new_a)
+
+        await ctx.send(embed=embed)
 
 
-@bot.command()
-async def confess(ctx):
-    await ctx.send("9x-7i > 3(3x-7u)")
-    time.sleep(2)
-    await ctx.send("9x-7i > 9x-21u")
-    time.sleep(2)
-    await ctx.send("-7i > -21u")
-    time.sleep(2)
-    await ctx.send("7i < 21u")
-    time.sleep(2)
-    await ctx.send("I <3 u")
 
+    @bot.command()
+    async def ping(ctx):
+        '''顯示延遲'''
+        await ctx.send(f"我回應主人的時間是{round(bot.latency * 1000)} ms呦！")
 
-@bot.command()
-async def calcdate(ctx, day: int):
-    """Add or subtract given day count by today and return."""
-    td = datetime.datetime.now()
-    today = datetime.date.today()
-    tdelta = datetime.timedelta(days=day)
-    result = today + tdelta
-    dt = datetime.datetime.combine(result, td.time())
-    embed = discord.Embed(timestamp=dt)
-    await ctx.channel.send(embed=embed)
+    @bot.command()
+    async def say(ctx, *, msg):
+        '''讓二乃說說話'''
+        await ctx.message.delete()
+        await ctx.send(msg)
 
-
-@bot.command()
-async def ping(ctx):
-    await ctx.send(f"我回應主人的時間是{round(bot.latency * 1000)} ms呦！")
-
+    @bot.command()
+    async def clean(ctx, num: int):
+        '''刪除 n 條訊息'''
+        await ctx.channel.purge(limit=num + 1)
 
 status = cycle(['Do^3!', '小提琴!', '鋼琴!', '書法!', '長笛!', '唱歌!', '打扮!', '綁蝴蝶結!', '看著主人發呆!'])
-
-
-@bot.command()
-async def say(ctx, *, msg):
-    await ctx.message.delete()
-    await ctx.send(msg)
-
-
-@bot.command()
-async def clean(ctx, num: int):
-    await ctx.channel.purge(limit=num + 1)
-
-
 @tasks.loop(seconds=5)
 async def change_status():
     await bot.change_presence(status=discord.Status.idle, activity=discord.Game(next(status)))
+
 
 bot.run(token)
