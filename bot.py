@@ -527,11 +527,11 @@ class Commands(commands.Cog):
 
 
     @bot.command()
-    async def wiki(ctx, term):
+    async def wiki(ctx,term):
         res = requests.get('https://zh.wikipedia.org/wiki/{}'.format(term))
         soup = BeautifulSoup(res.text, 'html.parser')
         li = soup.select_one('.mw-parser-output p')
-        if li is None or :
+        if li is None:
             await ctx.send("查無資料喲!")
             return 0
         await ctx.send(li.text)
