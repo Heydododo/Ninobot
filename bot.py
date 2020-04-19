@@ -502,7 +502,6 @@ class Commands(commands.Cog):
         url = f"https://tw.voicetube.com/definition/{msg}"
         res = requests.get(url)
         soup = BeautifulSoup(res.text,"html.parser")
-        print(soup)
         message = ""
         pronounce = ""
         for li in soup.select('.word-def-list'):
@@ -527,6 +526,15 @@ class Commands(commands.Cog):
         await ctx.send(embed=embed)
 
 
+    @bot.command()
+    async def wiki(ctx, term):
+        res = requests.get('https://zh.wikipedia.org/wiki/{}'.format(term))
+        soup = BeautifulSoup(res.text, 'html.parser')
+        li = soup.select_one('.mw-parser-output p')
+        if li is None or :
+            await ctx.send("查無資料喲!")
+            return 0
+        await ctx.send(li.text)
 
     @bot.command()
     async def ping(ctx):
