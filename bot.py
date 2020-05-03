@@ -14,6 +14,9 @@ from itertools import cycle
 from random import randint
 from bs4 import BeautifulSoup
 import requests
+import os
+import sys
+
 
 
 # Declare
@@ -225,6 +228,13 @@ class VoiceState:
     @property
     def is_playing(self):
         return self.voice and self.current
+    @property
+    def restart(self):
+        print("restart....")
+        self.bot.loop.create_task(self.stop())
+        self.exists = False
+
+        return os.system('python "C:\\Users\\Allen\\PycharmProjects\\Ninobot\\bot.py"')
 
     async def audio_player_task(self):
         while True:
@@ -239,9 +249,10 @@ class VoiceState:
                     async with timeout(180):  # 3 minutes
                         self.current = await self.songs.get()
                 except asyncio.TimeoutError:
-                    self.bot.loop.create_task(self.stop())
-                    self.exists = False
-                    return
+                    self.restart
+
+
+
 
             self.current.source.volume = self._volume
             self.voice.play(self.current.source, after=self.play_next_song)
@@ -390,6 +401,114 @@ class Music(commands.Cog):
         ctx.voice_state.songs.remove(index - 1)
         await ctx.message.add_reaction('✅')
 
+    @commands.command()
+    async def hello(self, ctx):
+        '''Hello'''
+        await ctx.send("怎麼啦～主人？")
+
+    @commands.command()
+    async def users(self, ctx):
+        '''顯示server人數'''
+        id = bot.get_guild(ctx.guild.id)
+        await ctx.send(f"""伺服器人數為 ： {id.member_count} 呦 """)
+
+    @commands.command()
+    async def calcdate(self, ctx, day: int):
+        """計算天數 例如calcdate 5 則回傳5天後日期"""
+        td = datetime.datetime.now()
+        today = datetime.date.today()
+        tdelta = datetime.timedelta(days=day)
+        result = today + tdelta
+        dt = datetime.datetime.combine(result, td.time())
+        embed = discord.Embed(timestamp=dt)
+        await ctx.channel.send(embed=embed)
+
+    @commands.command()
+    async def dict(self, ctx, msg):
+        """翻譯蒟蒻"""
+        url = f"https://tw.voicetube.com/definition/{msg}"
+        res = requests.get(url)
+        soup = BeautifulSoup(res.text, "html.parser")
+        message = ""
+        pronounce = ""
+        for li in soup.select('.word-def-list'):
+            message += (li.text)
+        if (len(message) == 0):
+            await ctx.send("查無此單字喲!")
+            return 0
+
+        for li in soup.select('.ps-block'):
+            pronounce += li.text
+        # embed
+        embed = discord.Embed(title=f"""{msg} 中文解釋""", color=0xFDA8FD)
+
+        embed.add_field(name="Pronounce", value=pronounce)
+
+        embed.add_field(name="-", value="-")
+
+        embed.add_field(name="-", value="-")
+
+        embed.add_field(name="Definition", value=message)
+
+        await ctx.send(embed=embed)
+
+    @commands.command()
+    async def map(self, ctx, *, msg):
+        msg = msg.replace(" ", "%20")
+        print(msg)
+        url = f"https://osu.ppy.sh/beatmapsets?q={msg}"
+        print(url)
+        res = requests.get(url)
+        soup = BeautifulSoup(res.text, "html.parser")
+        for li in soup.select('.beatmapsets'):
+            print(li.text)
+
+    @commands.command()
+    async def wiki(self, ctx, term):
+        """搜索Wiki資料"""
+        res = requests.get('https://zh.wikipedia.org/wiki/{}'.format(term))
+        soup = BeautifulSoup(res.text, 'html.parser')
+        li = soup.select_one('.mw-parser-output p')
+        if li is None:
+            await ctx.send("查無資料喲!")
+            return 0
+        await ctx.send(li.text)
+
+    @commands.command()
+    async def ping(self, ctx):
+        '''顯示延遲'''
+        await ctx.send(f"我回應主人的時間是{round(bot.latency * 1000)} ms呦！")
+
+    @commands.command()
+    async def say(self, ctx, *, msg):
+        '''讓二乃說說話'''
+        await ctx.message.delete()
+        await ctx.send(msg)
+
+    @commands.command()
+    async def clean(self, ctx, num: int):
+        '''刪除 n 條訊息'''
+        await ctx.channel.purge(limit=num + 1)
+
+    @commands.command()
+    @commands.has_permissions(manage_guild=True)
+    async def shutdown(self, ctx):
+        '''關機'''
+        await ctx.send("已撤回所有分布伺服器....")
+        time.sleep(0.5)
+        await ctx.send("關機中.......")
+        await ctx.voice_state.stop()
+        del self.voice_states[ctx.guild.id]
+        sys.exit()
+
+    @commands.command()
+    async def restart(self, ctx):
+        '''重新啟動'''
+        await ctx.send("重新啟動中......")
+        await ctx.voice_state.stop()
+        del self.voice_states[ctx.guild.id]
+        return os.system('python "C:\\Users\\Allen\\PycharmProjects\\Ninobot\\bot.py"')
+
     @commands.command(name='play', aliases=['p'])
     async def _play(self, ctx: commands.Context, *, search: str):
         """撥放歌曲 """
@@ -472,85 +591,9 @@ async def on_member_join(member):
     await bot.get_channel(memberchannel).edit(name=f"伺服器人數\t {id.member_count} ")
 
 
-class Commands(commands.Cog):
-    @bot.command()
-    async def hello(ctx):
-        '''Hello'''
-        await ctx.send("怎麼啦～主人？")
-
-    @bot.command()
-    async def users(ctx):
-        '''顯示server人數'''
-        id = bot.get_guild(ctx.guild.id)
-        await ctx.send(f"""伺服器人數為 ： {id.member_count} 呦 """)
+#class Commands(commands.Cog):
 
 
-    @bot.command()
-    async def calcdate(ctx, day: int):
-        """計算天數 例如calcdate 5 則回傳5天後日期"""
-        td = datetime.datetime.now()
-        today = datetime.date.today()
-        tdelta = datetime.timedelta(days=day)
-        result = today + tdelta
-        dt = datetime.datetime.combine(result, td.time())
-        embed = discord.Embed(timestamp=dt)
-        await ctx.channel.send(embed=embed)
-
-    @bot.command()
-    async def dict(ctx, msg):
-        """翻譯蒟蒻"""
-        url = f"https://tw.voicetube.com/definition/{msg}"
-        res = requests.get(url)
-        soup = BeautifulSoup(res.text,"html.parser")
-        message = ""
-        pronounce = ""
-        for li in soup.select('.word-def-list'):
-            message += (li.text)
-        if(len(message) == 0):
-            await ctx.send("查無此單字喲!")
-            return 0
-
-        for li in soup.select('.ps-block'):
-            pronounce += li.text
-        #embed
-        embed = discord.Embed(title=f"""{msg} 中文解釋""", color=0xFDA8FD)
-
-        embed.add_field(name="Pronounce", value=pronounce)
-
-        embed.add_field(name="-", value="-")
-
-        embed.add_field(name="-", value="-")
-
-        embed.add_field(name="Definition", value=message)
-
-        await ctx.send(embed=embed)
-
-
-    @bot.command()
-    async def wiki(ctx,term):
-        res = requests.get('https://zh.wikipedia.org/wiki/{}'.format(term))
-        soup = BeautifulSoup(res.text, 'html.parser')
-        li = soup.select_one('.mw-parser-output p')
-        if li is None:
-            await ctx.send("查無資料喲!")
-            return 0
-        await ctx.send(li.text)
-
-    @bot.command()
-    async def ping(ctx):
-        '''顯示延遲'''
-        await ctx.send(f"我回應主人的時間是{round(bot.latency * 1000)} ms呦！")
-
-    @bot.command()
-    async def say(ctx, *, msg):
-        '''讓二乃說說話'''
-        await ctx.message.delete()
-        await ctx.send(msg)
-
-    @bot.command()
-    async def clean(ctx, num: int):
-        '''刪除 n 條訊息'''
-        await ctx.channel.purge(limit=num + 1)
 
 status = cycle(['Do^3!', '小提琴!', '鋼琴!', '書法!', '長笛!', '唱歌!', '打扮!', '綁蝴蝶結!', '看著主人發呆!'])
 @tasks.loop(seconds=5)
@@ -559,3 +602,5 @@ async def change_status():
 
 
 bot.run(token)
+
+
