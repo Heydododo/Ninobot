@@ -6,3 +6,4 @@ youtube_dl
 pynacl
 beautifulsoup4
 requests
+python_utils
